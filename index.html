@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080a13">
+<meta name="description" content="Monitora le tue ore di studio, imposta obiettivi settimanali e segui i tuoi progressi.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StudyFlow">
+<title>StudyFlow · Monitoraggio Studio</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#080a13;
+    --surface:rgba(255,255,255,.045);
+    --surface-2:rgba(255,255,255,.07);
+    --border:rgba(255,255,255,.09);
+    --border-2:rgba(255,255,255,.16);
+    --text:#e9ecf8;
+    --muted:#8b93ad;
+    --a1:#7c6cff;
+    --a2:#22d3ee;
+    --ok:#34d399;
+    --danger:#fb7185;
+    --r:22px;
+  }
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,system-ui,sans-serif;
+    background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(124,108,255,.30), transparent 62%),
+      radial-gradient(720px 460px at 92% 2%, rgba(34,211,238,.18), transparent 62%),
+      radial-gradient(820px 620px at 50% 112%, rgba(124,108,255,.14), transparent 62%);
+  }
+  .app{max-width:760px;margin:0 auto;padding:22px 16px 70px}
+
+  /* ---------- HEADER ---------- */
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--a1),var(--a2));
+    box-shadow:0 8px 24px rgba(124,108,255,.35);
+  }
+  .logo svg{width:23px;height:23px}
+  .brand h1{font-size:1.18rem;font-weight:700;letter-spacing:-.02em}
+  .brand p{font-size:.74rem;color:var(--muted);margin-top:1px}
+  .icon-btn{
+    width:44px;height:44px;border-radius:14px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text);display:grid;place-items:center;
+    cursor:pointer;transition:.2s;backdrop-filter:blur(12px);
+  }
+  .icon-btn:active{transform:scale(.93);background:var(--surface-2)}
+  .icon-btn svg{width:20px;height:20px}
+
+  /* ---------- CARDS ---------- */
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+    padding:20px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:0 12px 40px rgba(0,0,0,.28);
+    margin-bottom:16px;
+  }
+  .card-title{
+    font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;
+  }
+  .card-title::before{
+    content:"";width:4px;height:14px;border-radius:2px;
+    background:linear-gradient(180deg,var(--a1),var(--a2));
+  }
+
+  /* ---------- WEEK NAV ---------- */
+  .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:10px}
+  .nav-btn{
+    width:38px;height:38px;flex:0 0 auto;border-radius:12px;border:1px solid var(--border);
+    background:var(--surface-2);color:var(--text);display:grid;place-items:center;
+    cursor:pointer;transition:.2s;font-size:1rem;
+  }
+  .nav-btn:active{transform:scale(.9)}
+  .nav-btn:disabled{opacity:.3;pointer-events:none}
+  .week-info{text-align:center;flex:1;min-width:0}
+  .week-info .range{font-size:.95rem;font-weight:650;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .week-info .tag{
+    display:inline-block;font-size:.66rem;color:var(--a2);margin-top:3px;
+    letter-spacing:.08em;text-transform:uppercase;font-weight:700;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{display:flex;align-items:center;gap:22px}
+  .ring-wrap{position:relative;flex:0 0 auto;width:132px;height:132px}
+  .ring{width:132px;height:132px;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-linecap:round}
+  .ring-bg{stroke:rgba(255,255,255,.07);stroke-width:11}
+  .ring-fg{
+    stroke:url(#grad);stroke-width:11;
+    transition:stroke-dashoffset .9s cubic-bezier(.4,0,.2,1);
+    filter:drop-shadow(0 0 8px rgba(124,108,255,.55));
+  }
+  .ring-center{
+    position:absolute;inset:0;display:grid;place-content:center;text-align:center;
+  }
+  .ring-center .pct{font-size:1.65rem;font-weight:750;letter-spacing:-.03em;line-height:1}
+  .ring-center .sub{font-size:.64rem;color:var(--muted);margin-top:4px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+
+  .hero-stats{flex:1;display:flex;flex-direction:column;gap:12px;min-width:0}
+  .stat{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .stat .lbl{font-size:.78rem;color:var(--muted);font-weight:500}
+  .stat .val{font-size:1.02rem;font-weight:700;letter-spacing:-.02em}
+  .stat .val small{font-size:.7rem;color:var(--muted);font-weight:600;margin-left:2px}
+  .progress-line{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:2px}
+  .progress-line i{
+    display:block;height:100%;border-radius:99px;
+    background:linear-gradient(90deg,var(--a1),var(--a2));
+    transition:width .8s cubic-bezier(.4,0,.2,1);
+  }
+  .done-badge{
+    display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;
+    color:var(--ok);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);
+    padding:5px 11px;border-radius:99px;margin-top:12px;
+  }
+
+  /* ---------- FORM ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .field{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+  .field label{font-size:.74rem;color:var(--muted);font-weight:600;letter-spacing:.02em}
+  input,select{
+    width:100%;padding:13px 14px;border-radius:14px;font-size:.95rem;font-family:inherit;
+    background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);
+    outline:none;transition:.2s;
+  }
+  input::placeholder{color:#5b6480}
+  input:focus,select:focus{
+    border-color:rgba(124,108,255,.65);background:rgba(124,108,255,.09);
+    box-shadow:0 0 0 4px rgba(124,108,255,.12);
+  }
+  input[type="date"]{color-scheme:dark}
+  input[type="number"]{-moz-appearance:textfield}
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .btn{
+    width:100%;padding:15px;border:none;border-radius:15px;font-size:.95rem;font-weight:700;
+    font-family:inherit;color:#fff;cursor:pointer;letter-spacing:.01em;
+    background:linear-gradient(135deg,var(--a1),var(--a2));
+    box-shadow:0 10px 26px rgba(124,108,255,.32);
+    transition:.18s;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:active{transform:scale(.975);box-shadow:0 6px 16px rgba(124,108,255,.28)}
+  .btn svg{width:18px;height:18px}
+  .btn.ghost{
+    background:var(--surface-2);color:var(--text);border:1px solid var(--border);
+    box-shadow:none;font-weight:600;
+  }
+  .btn.ghost:active{background:rgba(255,255,255,.11)}
+  .btn.danger{background:rgba(251,113,133,.13);color:var(--danger);border:1px solid rgba(251,113,133,.3);box-shadow:none}
+
+  /* ---------- CHART ---------- */
+  .bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end}
+  .bar-col{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0}
+  .bar-val{font-size:.66rem;color:var(--muted);font-weight:700;height:14px;white-space:nowrap}
+  .bar-val.on{color:var(--text)}
+  .bar-track{
+    width:100%;height:112px;border-radius:12px;background:rgba(255,255,255,.045);
+    display:flex;align-items:flex-end;overflow:hidden;position:relative;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .bar-fill{
+    width:100%;border-radius:10px;min-height:0;
+    background:linear-gradient(180deg,var(--a2),var(--a1));
+    transition:height .8s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 -2px 14px rgba(124,108,255,.4) inset;
+  }
+  .bar-col.today .bar-track{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.07)}
+  .bar-day{font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .bar-col.today .bar-day{color:var(--a2)}
+
+  /* ---------- SESSIONS ---------- */
+  .day-group{margin-bottom:18px}
+  .day-group:last-child{margin-bottom:0}
+  .day-head{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:.74rem;font-weight:700;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;padding:0 2px;
+  }
+  .day-head .tot{color:var(--a2);letter-spacing:0;text-transform:none;font-size:.78rem}
+  .session{
+    display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:15px;
+    background:rgba(255,255,255,.045);border:1px solid var(--border);margin-bottom:8px;
+    animation:pop .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .session.out{animation:fadeOut .25s forwards}
+  @keyframes fadeOut{to{opacity:0;transform:translateX(-16px);height:0;padding:0;margin:0;border-width:0}}
+  .s-ico{
+    width:38px;height:38px;flex:0 0 auto;border-radius:12px;display:grid;place-items:center;
+    background:linear-gradient(135deg,rgba(124,108,255,.22),rgba(34,211,238,.18));
+    border:1px solid rgba(124,108,255,.25);font-size:1rem;font-weight:800;color:#c3bcff;
+  }
+  .s-body{flex:1;min-width:0}
+  .s-sub{font-size:.92rem;font-weight:650;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .s-note{font-size:.76rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .s-hrs{
+    flex:0 0 auto;font-size:.82rem;font-weight:750;color:var(--a2);
+    background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.22);
+    padding:5px 10px;border-radius:9px;
+  }
+  .s-del{
+    flex:0 0 auto;width:32px;height:32px;border-radius:10px;border:none;cursor:pointer;
+    background:transparent;color:#5b6480;display:grid;place-items:center;transition:.2s;
+  }
+  .s-del:active{background:rgba(251,113,133,.15);color:var(--danger)}
+  .s-del svg{width:16px;height:16px}
+
+  .empty{
+    text-align:center;padding:34px 16px;color:var(--muted);
+  }
+  .empty .em{font-size:2rem;margin-bottom:10px;opacity:.55}
+  .empty p{font-size:.85rem;line-height:1.5}
+
+  /* ---------- MODAL ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,5,12,.72);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);z-index:50;display:flex;align-items:flex-end;
+    justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;
+  }
+  .overlay.show{opacity:1;pointer-events:auto}
+  .sheet{
+    width:100%;max-width:760px;background:#0d1020;border:1px solid var(--border);
+    border-radius:26px 26px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom));
+    transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);
+    max-height:88dvh;overflow-y:auto;
+  }
+  .overlay.show .sheet{transform:translateY(0)}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .sheet-head h2{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
+  .grabber{width:38px;height:4px;border-radius:99px;background:rgba(255,255,255,.18);margin:0 auto 18px}
+  .hint{font-size:.74rem;color:var(--muted);line-height:1.55;margin-top:-4px;margin-bottom:12px}
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));
+    transform:translate(-50%,120%);z-index:80;
+    background:rgba(24,28,48,.96);border:1px solid var(--border-2);
+    color:var(--text);padding:12px 20px;border-radius:99px;font-size:.85rem;font-weight:600;
+    box-shadow:0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(14px);
+    transition:transform .35s cubic-bezier(.32,.72,0,1);white-space:nowrap;max-width:90vw;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .toast.show{transform:translate(-50%,0)}
+
+  /* ---------- INSTALL BANNER ---------- */
+  .install{
+    display:none;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;
+    background:linear-gradient(135deg,rgba(124,108,255,.16),rgba(34,211,238,.1));
+    border:1px solid rgba(124,108,255,.3);margin-bottom:16px;
+  }
+  .install.show{display:flex}
+  .install .txt{flex:1;font-size:.8rem;line-height:1.4;color:#cdd3ea}
+  .install button{
+    flex:0 0 auto;padding:9px 16px;border-radius:11px;border:none;cursor:pointer;
+    font-family:inherit;font-size:.8rem;font-weight:700;color:#fff;
+    background:linear-gradient(135deg,var(--a1),var(--a2));
+  }
+
+  @media(max-width:400px){
+    .ring-wrap,.ring{width:112px;height:112px}
+    .ring-center .pct{font-size:1.4rem}
+    .hero{gap:16px}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>StudyFlow</h1>
+        <p>Monitoraggio studio</p>
+      </div>
+    </div>
+    <button class="icon-btn" id="btnSettings" aria-label="Impostazioni">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- INSTALL BANNER -->
+  <div class="install" id="installBanner">
+    <div class="txt"><strong>Installa StudyFlow</strong><br>Aggiungila alla schermata Home per usarla come app.</div>
+    <button id="btnInstall">Installa</button>
+  </div>
+
+  <!-- HERO -->
+  <section class="card">
+    <div class="week-nav">
+      <button class="nav-btn" id="prevWeek" aria-label="Settimana precedente">‹</button>
+      <div class="week-info">
+        <div class="range" id="weekRange">—</div>
+        <div class="tag" id="weekTag"></div>
+      </div>
+      <button class="nav-btn" id="nextWeek" aria-label="Settimana successiva">›</button>
+    </div>
+
+    <div class="hero">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 132 132">
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7c6cff"/>
+              <stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="66" cy="66" r="56"/>
+          <circle class="ring-fg" cx="66" cy="66" r="56" id="ringFg"/>
+        </svg>
+        <div class="ring-center">
+          <div class="pct" id="ringPct">0%</div>
+          <div class="sub">obiettivo</div>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="lbl">Ore studiate</span>
+          <span class="val" id="statTotal">0<small>/0h</small></span>
+        </div>
+        <div class="progress-line"><i id="lineFill" style="width:0%"></i></div>
+        <div class="stat">
+          <span class="lbl">Media giornaliera</span>
+          <span class="val" id="statAvg">0<small>h</small></span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Sessioni</span>
+          <span class="val" id="statCount">0</span>
+        </div>
+        <div class="stat">
+          <span class="lbl">Serie attiva</span>
+          <span class="val" id="statStreak">0<small>gg</small></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="doneWrap" style="text-align:center"></div>
+  </section>
+
+  <!-- FORM -->
+  <section class="card">
+    <div class="card-title">Aggiungi sessione</div>
+    <form id="form" autocomplete="off">
+      <div class="grid2">
+        <div class="field">
+          <label for="subject">Materia / argomento</label>
+          <input id="subject" list="subjectList" placeholder="Es. Matematica" required maxlength="60">
+          <datalist id="subjectList"></datalist>
+        </div>
+        <div class="field">
+          <label for="hours">Ore</label>
+          <input id="hours" type="number" step="0.25" min="0.25" max="24" placeholder="1.5" required>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="date">Data</label>
+          <input id="date" type="date" required>
+        </div>
+        <div class="field">
+          <label for="note">Nota (opzionale)</label>
+          <input id="note" placeholder="Capitolo 3…" maxlength="80">
+        </div>
+      </div>
+      <button class="btn" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Aggiungi
+      </button>
+    </form>
+  </section>
+
+  <!-- CHART -->
+  <section class="card">
+    <div class="card-title">Andamento settimanale</div>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <!-- SESSIONS -->
+  <section class="card">
+    <div class="card-title">Sessioni della settimana</div>
+    <div id="sessionList"></div>
+  </section>
+
+</div>
+
+<!-- MODAL IMPOSTAZIONI -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <h2>Impostazioni</h2>
+      <button class="icon-btn" id="btnClose" aria-label="Chiudi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="field">
+      <label for="targetInput">Obiettivo settimanale (ore)</label>
+      <input id="targetInput" type="number" step="0.5" min="0.5" max="200">
+    </div>
+    <p class="hint">Puoi cambiarlo quando vuoi: l'andamento si ricalcola subito.</p>
+    <button class="btn" id="btnSaveTarget">Salva obiettivo</button>
+
+    <div style="height:22px"></div>
+    <div class="card-title">Backup dati</div>
+    <div class="grid2" style="gap:10px;margin-bottom:12px">
+      <button class="btn ghost" id="btnExport">Esporta</button>
+      <button class="btn ghost" id="btnImport">Importa</button>
+    </div>
+    <input type="file" id="fileInput" accept="application/json" hidden>
+    <button class="btn danger" id="btnReset">Cancella tutti i dati</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var KEY = "studyflow.v1";
+  var state = loadState();
+  var weekOffset = 0;
+
+  /* ---------------- STORAGE ---------------- */
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(KEY);
+      if(raw){
+        var p = JSON.parse(raw);
+        return {
+          target: typeof p.target === "number" ? p.target : 15,
+          sessions: Array.isArray(p.sessions) ? p.sessions : []
+        };
+      }
+    }catch(e){}
+    return { target: 15, sessions: [] };
+  }
+  function saveState(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ---------------- DATE HELPERS ---------------- */
+  function toISO(d){
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  }
+  function parseISO(s){
+    var p = String(s).split("-");
+    return new Date(+p[0], +p[1]-1, +p[2]);
+  }
+  function startOfWeek(d){
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var day = (x.getDay() + 6) % 7; // 0 = lunedì
+    x.setDate(x.getDate() - day);
+    return x;
+  }
+  function addDays(d, n){
+    var x = new Date(d); x.setDate(x.getDate() + n); return x;
+  }
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  function fmtH(n){
+    var v = Math.round(n * 100) / 100;
+    return v.toLocaleString("it-IT", { maximumFractionDigits: 2 });
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  /* ---------------- RENDER ---------------- */
+  function render(){
+    var ws = addDays(startOfWeek(new Date()), weekOffset * 7);
+    var we = addDays(ws, 6);
+    var wsISO = toISO(ws), weISO = toISO(we);
+
+    // --- label settimana ---
+    var rangeTxt;
+    if(ws.getMonth() === we.getMonth()){
+      rangeTxt = ws.getDate() + " – " + we.getDate() + " " +
+        ws.toLocaleDateString("it-IT", { month:"long" }) + " " + we.getFullYear();
+    }else{
+      rangeTxt = ws.toLocaleDateString("it-IT",{day:"numeric",month:"short"}) + " – " +
+        we.toLocaleDateString("it-IT",{day:"numeric",month:"short"}) + " " + we.getFullYear();
+    }
+    document.getElementById("weekRange").textContent = cap(rangeTxt);
+
+    var tag = document.getElementById("weekTag");
+    if(weekOffset === 0) tag.textContent = "Questa settimana";
+    else if(weekOffset === -1) tag.textContent = "Settimana scorsa";
+    else if(weekOffset === 1) tag.textContent = "Prossima settimana";
+    else tag.textContent = weekOffset > 0 ? ("+" + weekOffset + " settimane") : (weekOffset + " settimane");
+    tag.style.color = weekOffset === 0 ? "var(--a2)" : "var(--muted)";
+
+    document.getElementById("nextWeek").disabled = weekOffset >= 0;
+
+    // --- sessioni della settimana ---
+    var weekSessions = state.sessions.filter(function(s){
+      return s.date >= wsISO && s.date <= weISO;
+    });
+
+    var total = weekSessions.reduce(function(a,s){ return a + (+s.hours || 0); }, 0);
+    var target = state.target > 0 ? state.target : 1;
+    var pct = Math.min(total / target, 1);
+    var pctTxt = Math.round((total / target) * 100);
+
+    // --- anello ---
+    var C = 2 * Math.PI * 56;
+    var ring = document.getElementById("ringFg");
+    ring.style.strokeDasharray = C.toFixed(2);
+    ring.style.strokeDashoffset = (C * (1 - pct)).toFixed(2);
+    document.getElementById("ringPct").textContent = pctTxt + "%";
+
+    // --- stats ---
+    document.getElementById("statTotal").innerHTML =
+      fmtH(total) + "<small>/" + fmtH(state.target) + "h</small>";
+    document.getElementById("lineFill").style.width = (pct * 100).toFixed(1) + "%";
+
+    var daysElapsed = 7;
+    if(weekOffset === 0){
+      var today = new Date();
+      daysElapsed = Math.max(1, ((today.getDay() + 6) % 7) + 1);
+    }
+    document.getElementById("statAvg").innerHTML =
+      fmtH(total / daysElapsed) + "<small>h</small>";
+    document.getElementById("statCount").textContent = weekSessions.length;
+    document.getElementById("statStreak").innerHTML =
+      computeStreak() + "<small>gg</small>";
+
+    // --- badge obiettivo ---
+    var dw = document.getElementById("doneWrap");
+    dw.innerHTML = (total >= state.target && state.target > 0)
+      ? '<div class="done-badge">🎉 Obiettivo settimanale raggiunto!</div>' : "";
+
+    renderBars(ws, weekSessions);
+    renderSessions(weekSessions);
+    renderSubjects();
+  }
+
+  function renderBars(ws, sessions){
+    var todayISO = toISO(new Date());
+    var totals = [0,0,0,0,0,0,0];
+    sessions.forEach(function(s){
+      var d = parseISO(s.date);
+      var idx = (d.getDay() + 6) % 7;
+      totals[idx] += (+s.hours || 0);
+    });
+    var max = Math.max.apply(null, totals.concat([1]));
+    var names = ["Lun","Mar","Mer","Gio","Ven","Sab","Dom"];
+    var html = "";
+    for(var i = 0; i < 7; i++){
+      var iso = toISO(addDays(ws, i));
+      var h = totals[i];
+      var pct = max > 0 ? (h / max) * 100 : 0;
+      var isToday = iso === todayISO;
+      html += '<div class="bar-col' + (isToday ? " today" : "") + '">' +
+        '<div class="bar-val' + (h > 0 ? " on" : "") + '">' + (h > 0 ? fmtH(h) + "h" : "") + '</div>' +
+        '<div class="bar-track">' +
+          (h > 0 ? '<div class="bar-fill" style="height:' + Math.max(pct, 6) + '%"></div>' : "") +
+        '</div>' +
+        '<div class="bar-day">' + names[i].charAt(0) + '</div>' +
+      '</div>';
+    }
+    document.getElementById("bars").innerHTML = html;
+  }
+
+  function renderSessions(list){
+    var el = document.getElementById("sessionList");
+    if(!list.length){
+      el.innerHTML = '<div class="empty"><div class="em">📖</div>' +
+        '<p>Nessuna sessione in questa settimana.<br>Aggiungi la tua prima sessione di studio!</p></div>';
+      return;
+    }
+    var groups = {};
+    list.forEach(function(s){
+      if(!groups[s.date]) groups[s.date] = [];
+      groups[s.date].push(s);
+    });
+    var days = Object.keys(groups).sort().reverse();
+    var todayISO = toISO(new Date());
+    var yesterdayISO = toISO(addDays(new Date(), -1));
+    var html = "";
+
+    days.forEach(function(iso){
+      var items = groups[iso].slice().sort(function(a,b){ return b.id - a.id; });
+      var dayTot = items.reduce(function(a,s){ return a + (+s.hours||0); }, 0);
+
+      var label;
+      if(iso === todayISO) label = "Oggi";
+      else if(iso === yesterdayISO) label = "Ieri";
+      else label = cap(parseISO(iso).toLocaleDateString("it-IT", { weekday:"long", day:"numeric", month:"short" }));
+
+      html += '<div class="day-group">' +
+        '<div class="day-head"><span>' + esc(label) + '</span>' +
+        '<span class="tot">' + fmtH(dayTot) + 'h</span></div>';
+
+      items.forEach(function(s){
+        var initial = (s.subject || "?").trim().charAt(0).toUpperCase();
+        html += '<div class="session" data-id="' + s.id + '">' +
+          '<div class="s-ico">' + esc(initial) + '</div>' +
+          '<div class="s-body">' +
+            '<div class="s-sub">' + esc(s.subject) + '</div>' +
+            (s.note ? '<div class="s-note">' + esc(s.note) + '</div>' : "") +
+          '</div>' +
+          '<div class="s-hrs">' + fmtH(s.hours) + 'h</div>' +
+          '<button class="s-del" data-del="' + s.id + '" aria-label="Elimina">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>' +
+          '</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function renderSubjects(){
+    var set = {};
+    state.sessions.forEach(function(s){ if(s.subject) set[s.subject] = 1; });
+    var arr = Object.keys(set).sort(function(a,b){ return a.localeCompare(b, "it"); });
+    document.getElementById("subjectList").innerHTML =
+      arr.map(function(s){ return '<option value="' + esc(s) + '">'; }).join("");
+  }
+
+  function computeStreak(){
+    var set = {};
+    state.sessions.forEach(function(s){ set[s.date] = 1; });
+    var d = new Date();
+    if(!set[toISO(d)]){
+      d = addDays(d, -1);
+      if(!set[toISO(d)]) return 0;
+    }
+    var n = 0;
+    while(set[toISO(d)]){ n++; d = addDays(d, -1); }
+    return n;
+  }
+
+  /* ---------------- AZIONI ---------------- */
+  function addSession(subject, hours, date, note){
+    state.sessions.push({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      subject: subject,
+      hours: hours,
+      date: date,
+      note: note || ""
+    });
+    saveState();
+  }
+
+  function deleteSession(id){
+    state.sessions = state.sessions.filter(function(s){ return s.id !== id; });
+    saveState();
+  }
+
+  function toast(msg){
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ t.classList.remove("show"); }, 2000);
+  }
+
+  /* ---------------- EVENTI ---------------- */
+  var form = document.getElementById("form");
+  var dateInput = document.getElementById("date");
+  dateInput.value = toISO(new Date());
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var subject = document.getElementById("subject").value.trim();
+    var hours = parseFloat(document.getElementById("hours").value);
+    var date = dateInput.value || toISO(new Date());
+    var note = document.getElementById("note").value.trim();
+
+    if(!subject){ toast("Inserisci la materia"); return; }
+    if(!hours || hours <= 0){ toast("Inserisci un numero di ore valido"); return; }
+
+    addSession(subject, hours, date, note);
+
+    // porta la vista sulla settimana della data inserita
+    var diff = Math.round((startOfWeek(parseISO(date)) - startOfWeek(new Date())) / 604800000);
+    weekOffset = Math.min(0, diff);
+
+    document.getElementById("hours").value = "";
+    document.getElementById("note").value = "";
+    if(window.navigator.vibrate) window.navigator.vibrate(12);
+
+    render();
+    toast("Sessione aggiunta ✓");
+  });
+
+  document.getElementById("sessionList").addEventListener("click", function(e){
+    var btn = e.target.closest("[data-del]");
+    if(!btn) return;
+    var id = Number(btn.getAttribute("data-del"));
+    var row = btn.closest(".session");
+    if(row){
+      row.classList.add("out");
+      setTimeout(function(){
+        deleteSession(id);
+        render();
+        toast("Sessione eliminata");
+      }, 220);
+    }
+  });
+
+  document.getElementById("prevWeek").addEventListener("click", function(){
+    weekOffset--; render();
+  });
+  document.getElementById("nextWeek").addEventListener("click", function(){
+    if(weekOffset < 0){ weekOffset++; render(); }
+  });
+
+  /* ---------------- MODAL ---------------- */
+  var overlay = document.getElementById("overlay");
+  function openSheet(){
+    document.getElementById("targetInput").value = state.target;
+    overlay.classList.add("show");
+    document.body.style.overflow = "hidden";
+  }
+  function closeSheet(){
+    overlay.classList.remove("show");
+    document.body.style.overflow = "";
+  }
+  document.getElementById("btnSettings").addEventListener("click", openSheet);
+  document.getElementById("btnClose").addEventListener("click", closeSheet);
+  overlay.addEventListener("click", function(e){ if(e.target === overlay) closeSheet(); });
+
+  document.getElementById("btnSaveTarget").addEventListener("click", function(){
+    var v = parseFloat(document.getElementById("targetInput").value);
+    if(!v || v <= 0){ toast("Inserisci un obiettivo valido"); return; }
+    state.target = Math.round(v * 100) / 100;
+    saveState();
+    render();
+    closeSheet();
+    toast("Obiettivo aggiornato ✓");
+  });
+
+  document.getElementById("btnExport").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "studyflow-backup-" + toISO(new Date()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+    toast("Backup esportato");
+  });
+
+  document.getElementById("btnImport").addEventListener("click", function(){
+    document.getElementById("fileInput").click();
+  });
+
+  document.getElementById("fileInput").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var d = JSON.parse(r.result);
+        if(d && Array.isArray(d.sessions)){
+          state.sessions = d.sessions;
+          if(typeof d.target === "number") state.target = d.target;
+          saveState();
+          render();
+          closeSheet();
+          toast("Dati importati ✓");
+        }else{
+          toast("File non valido");
+        }
+      }catch(err){ toast("File non valido"); }
+    };
+    r.readAsText(f);
+    e.target.value = "";
+  });
+
+  document.getElementById("btnReset").addEventListener("click", function(){
+    if(confirm("Cancellare definitivamente tutte le sessioni di studio?")){
+      state.sessions = [];
+      saveState();
+      render();
+      closeSheet();
+      toast("Dati cancellati");
+    }
+  });
+
+  /* ---------------- PWA ---------------- */
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("./sw.js").catch(function(){});
+    });
+  }
+
+  var deferredPrompt = null;
+  var banner = document.getElementById("installBanner");
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    banner.classList.add("show");
+  });
+  document.getElementById("btnInstall").addEventListener("click", function(){
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){
+      deferredPrompt = null;
+      banner.classList.remove("show");
+    });
+  });
+  window.addEventListener("appinstalled", function(){
+    banner.classList.remove("show");
+    toast("App installata ✓");
+  });
+
+  /* ---------------- AVVIO ---------------- */
+  render();
+})();
+</script>
+</body>
+</html>
