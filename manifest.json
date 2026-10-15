@@ -1,0 +1,18 @@
+{
+  "name": "StudyFlow · Monitoraggio Studio",
+  "short_name": "StudyFlow",
+  "description": "Monitora le tue ore di studio e raggiungi i tuoi obiettivi settimanali.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080a13",
+  "theme_color": "#080a13",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
